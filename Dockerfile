@@ -1,4 +1,4 @@
-FROM golang:1.21-alpine AS backend-builder
+FROM golang:alpine AS backend-builder
 # 由于使用了 gorm sqlite，需要启用 CGO 并安装 gcc
 RUN apk add --no-cache gcc musl-dev
 WORKDIR /app
