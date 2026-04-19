@@ -1,0 +1,12 @@
+# Backend
+backend/skopeo-sync-api
+backend/data.db
+backend/data.db-journal
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+frontend/.env.local
+
+# MacOS
+.DS_Store
