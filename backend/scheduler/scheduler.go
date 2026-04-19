@@ -40,8 +40,11 @@ func processTask(task *models.SyncTask) {
 	db.DB.First(&dest, task.DestID)
 
 	logMsg := fmt.Sprintf("========== 任务ID: %d ==========\n", task.ID)
-	logMsg += fmt.Sprintf("开始同步: %s -> %s\n", task.Image, task.DestImage)
-	log.Printf("[任务调度] 开始同步任务 ID: %d, %s -> %s\n", task.ID, task.Image, task.DestImage)
+	logMsg += fmt.Sprintf("源镜像: %s/%s\n", src.URL, task.Image)
+	logMsg += fmt.Sprintf("目标镜像: %s/%s\n", dest.URL, task.DestImage)
+	logMsg += fmt.Sprintf("最大重试次数: %d\n", task.Retries)
+	logMsg += "----------------------------------------\n"
+	log.Printf("[任务调度] 开始同步任务 ID: %d, %s/%s -> %s/%s\n", task.ID, src.URL, task.Image, dest.URL, task.DestImage)
 	
 	// 初始化到内存和数据库
 	task.Logs += logMsg

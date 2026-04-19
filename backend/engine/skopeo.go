@@ -24,6 +24,29 @@ func SyncImage(srcUrl, destUrl, srcImage, destImage string, retries int, srcUser
 	}
 
 	args = append(args, src, dest)
+	
+	// 在日志中打印出实际执行的完整命令 (隐藏密码)
+	displayArgs := make([]string, len(args))
+	copy(displayArgs, args)
+	for i, arg := range displayArgs {
+		if arg == "--src-creds" || arg == "--dest-creds" {
+			if i+1 < len(displayArgs) {
+				credsParts := strings.SplitN(displayArgs[i+1], ":", 2)
+				if len(credsParts) == 2 {
+					pass := credsParts[1]
+					var maskedPass string
+					if len(pass) <= 4 {
+						maskedPass = "***"
+					} else {
+						maskedPass = pass[:2] + "***" + pass[len(pass)-2:]
+					}
+					displayArgs[i+1] = fmt.Sprintf("%s:%s", credsParts[0], maskedPass)
+				}
+			}
+		}
+	}
+	logCallback(fmt.Sprintf("> 执行命令: skopeo %s\n\n", strings.Join(displayArgs, " ")))
+
 	cmd := exec.Command("skopeo", args...)
 
 	// 获取 stdout 和 stderr 的管道
