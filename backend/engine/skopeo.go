@@ -17,31 +17,28 @@ func SyncImage(srcUrl, destUrl, srcImage, destImage string, retries int, srcUser
 	args := []string{"copy", "--all", "--retry-times", fmt.Sprintf("%d", retries)}
 
 	if srcUser != "" && srcPass != "" {
-		args = append(args, "--src-creds", fmt.Sprintf("%s:%s", srcUser, srcPass))
+		args = append(args, "--src-username", srcUser, "--src-password", srcPass)
 	}
 	if destUser != "" && destPass != "" {
-		args = append(args, "--dest-creds", fmt.Sprintf("%s:%s", destUser, destPass))
+		args = append(args, "--dest-username", destUser, "--dest-password", destPass)
 	}
 
 	args = append(args, src, dest)
-	
+
 	// 在日志中打印出实际执行的完整命令 (隐藏密码)
 	displayArgs := make([]string, len(args))
 	copy(displayArgs, args)
 	for i, arg := range displayArgs {
-		if arg == "--src-creds" || arg == "--dest-creds" {
+		if arg == "--src-password" || arg == "--dest-password" {
 			if i+1 < len(displayArgs) {
-				credsParts := strings.SplitN(displayArgs[i+1], ":", 2)
-				if len(credsParts) == 2 {
-					pass := credsParts[1]
-					var maskedPass string
-					if len(pass) <= 4 {
-						maskedPass = "***"
-					} else {
-						maskedPass = pass[:2] + "***" + pass[len(pass)-2:]
-					}
-					displayArgs[i+1] = fmt.Sprintf("%s:%s", credsParts[0], maskedPass)
+				pass := displayArgs[i+1]
+				var maskedPass string
+				if len(pass) <= 4 {
+					maskedPass = "***"
+				} else {
+					maskedPass = pass[:2] + "***" + pass[len(pass)-2:]
 				}
+				displayArgs[i+1] = maskedPass
 			}
 		}
 	}
@@ -86,7 +83,7 @@ func GetImageSize(destUrl, destImage, destUser, destPass string) int64 {
 	// skopeo inspect docker://...
 	args := []string{"inspect"}
 	if destUser != "" && destPass != "" {
-		args = append(args, "--creds", fmt.Sprintf("%s:%s", destUser, destPass))
+		args = append(args, "--username", destUser, "--password", destPass)
 	}
 	args = append(args, dest)
 
@@ -127,12 +124,27 @@ func VerifyImage(srcUrl, destUrl, srcImage, destImage string, srcUser, srcPass, 
 	// ========== 1. 获取源镜像 manifest list 原始数据 ==========
 	srcArgs := []string{"inspect", "--raw"}
 	if srcUser != "" && srcPass != "" {
-		srcArgs = append(srcArgs, "--creds", fmt.Sprintf("%s:%s", srcUser, srcPass))
+		srcArgs = append(srcArgs, "--username", srcUser, "--password", srcPass)
 	}
 	srcArgs = append(srcArgs, src)
-	
-	logOutput += fmt.Sprintf("执行命令: skopeo %s\n", strings.Join(srcArgs, " "))
-	
+
+	// 打印时脱敏
+	displaySrcArgs := make([]string, len(srcArgs))
+	copy(displaySrcArgs, srcArgs)
+	for i, arg := range displaySrcArgs {
+		if arg == "--password" && i+1 < len(displaySrcArgs) {
+			pass := displaySrcArgs[i+1]
+			var maskedPass string
+			if len(pass) <= 4 {
+				maskedPass = "***"
+			} else {
+				maskedPass = pass[:2] + "***" + pass[len(pass)-2:]
+			}
+			displaySrcArgs[i+1] = maskedPass
+		}
+	}
+	logOutput += fmt.Sprintf("执行命令: skopeo %s\n", strings.Join(displaySrcArgs, " "))
+
 	srcCmd := exec.Command("skopeo", srcArgs...)
 	srcOut, err := srcCmd.CombinedOutput()
 	if err != nil {
@@ -140,7 +152,7 @@ func VerifyImage(srcUrl, destUrl, srcImage, destImage string, srcUser, srcPass, 
 		logOutput += fmt.Sprintf("Skopeo 输出详情:\n%s\n", string(srcOut))
 		return false, logOutput
 	}
-	
+
 	// 计算源镜像 Manifest 的 SHA256 散列值
 	srcDigestStr := fmt.Sprintf("sha256:%x", sha256.Sum256(srcOut))
 	logOutput += fmt.Sprintf("源 Manifest SHA256: %s\n", srcDigestStr)
@@ -148,12 +160,27 @@ func VerifyImage(srcUrl, destUrl, srcImage, destImage string, srcUser, srcPass, 
 	// ========== 2. 获取目标镜像 manifest list 原始数据 ==========
 	destArgs := []string{"inspect", "--raw"}
 	if destUser != "" && destPass != "" {
-		destArgs = append(destArgs, "--creds", fmt.Sprintf("%s:%s", destUser, destPass))
+		destArgs = append(destArgs, "--username", destUser, "--password", destPass)
 	}
 	destArgs = append(destArgs, dest)
-	
-	logOutput += fmt.Sprintf("执行命令: skopeo %s\n", strings.Join(destArgs, " "))
-	
+
+	// 打印时脱敏
+	displayDestArgs := make([]string, len(destArgs))
+	copy(displayDestArgs, destArgs)
+	for i, arg := range displayDestArgs {
+		if arg == "--password" && i+1 < len(displayDestArgs) {
+			pass := displayDestArgs[i+1]
+			var maskedPass string
+			if len(pass) <= 4 {
+				maskedPass = "***"
+			} else {
+				maskedPass = pass[:2] + "***" + pass[len(pass)-2:]
+			}
+			displayDestArgs[i+1] = maskedPass
+		}
+	}
+	logOutput += fmt.Sprintf("执行命令: skopeo %s\n", strings.Join(displayDestArgs, " "))
+
 	destCmd := exec.Command("skopeo", destArgs...)
 	destOut, err := destCmd.CombinedOutput()
 	if err != nil {
